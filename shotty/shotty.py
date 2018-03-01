@@ -89,6 +89,7 @@ def create_snapshots(project):
 
 @instances.command('list')
 	
+	
 @click.option('--project', default =None, help="Only instances for project (tag project:<name>)")
 
 def list_instances(project):
