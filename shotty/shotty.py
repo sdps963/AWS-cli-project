@@ -1,5 +1,6 @@
 import boto3
 import click
+import botocore
 
 
 session = boto3.Session(profile_name='shotty')
@@ -36,6 +37,7 @@ def list_snapshots(project):
 		for v in i.volumes.all():
 			for s in v.snapshots.all():
 				print(", ".join((s.id,v.id,i.id,s.state,s.progress,s.start_time.strftime("%c"))))
+				if s.state == 'completed':break
 				
 	return
 
@@ -69,10 +71,20 @@ def create_snapshots(project):
 	"Create snapshots for ec2 instances"
 	instances = filter_instances(project)
 	for i in instances:
+		print("stopping...{0}".format(i.id))
+		
+		i.stop()
+		i.wait_until_stopped()
+		
 		for v in i.volumes.all():
 			print("Creating snapshot of {0}".format(v.id))
 			v.create_snapshot(Description="Created by SnapshotsAlyze 30000")
-
+		
+		print("starting ....{0}".format(i.id))
+		
+		i.start()
+		i.wait_until_running()
+	print("Job's Done")
 	return
 
 @instances.command('list')
@@ -97,8 +109,11 @@ def stop_instances(project):
 	
 	for i in instances:
 		print("Stopping {0}...".format(i.id))
-		i.stop()
-		
+		try:
+		    i.stop()
+		except botocore.exceptions.ClientError as e:
+		    print("Could not stop {0}".formad(i.id) + str(e))
+		    continue
 	return
 	
 @instances.command('start')
@@ -109,7 +124,12 @@ def start_instances(project):
 	
 	for i in instances:
 		print("Starting {0}...".format(i.id))
-		i.start()
+		try:
+		    i.start()
+		except botocore.exceptions.ClientError as e:
+		    print("Could not start {0}".formad(i.id) + str(e))
+		    continue
+			  
 		
 	return
 	
